@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>백링크 침투기 v1</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #181b22;
+      --panel-2: #1f232c;
+      --border: #2a2f3a;
+      --text: #e6e9ef;
+      --muted: #8b93a3;
+      --accent: #5b8cff;
+      --accent-2: #3a6bf0;
+      --ok: #38d39f;
+      --err: #ff6b6b;
+      --warn: #ffcf5c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 32px 20px 60px; }
+    header { margin-bottom: 24px; }
+    h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: -0.3px; }
+    .sub { color: var(--muted); font-size: 13px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input[type="text"] {
+      width: 100%;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      padding: 11px 12px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    .field { margin-bottom: 16px; }
+    .row { display: flex; gap: 20px; flex-wrap: wrap; }
+    .check { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14px; cursor: pointer; }
+    .check input { width: 16px; height: 16px; accent-color: var(--accent); }
+    .actions { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+    button {
+      background: linear-gradient(180deg, var(--accent), var(--accent-2));
+      color: #fff; border: none; border-radius: 10px;
+      padding: 12px 22px; font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: transform .08s, opacity .15s;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .badge { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+    .badge.ok { color: var(--ok); border-color: rgba(56,211,159,.4); }
+    .badge.err { color: var(--err); border-color: rgba(255,107,107,.4); }
+    .badge.run { color: var(--accent); border-color: rgba(91,140,255,.4); }
+    .console {
+      background: #0a0c10; border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 16px; height: 340px; overflow-y: auto;
+      font-family: "SF Mono", "Cascadia Code", Consolas, monospace; font-size: 12.5px; line-height: 1.7;
+      white-space: pre-wrap; word-break: break-all; color: #c9d1e0;
+    }
+    .console .ln-err { color: var(--err); }
+    .console .ln-ok { color: var(--ok); }
+    .console .ln-step { color: var(--accent); }
+    .result { margin-top: 14px; font-size: 14px; }
+    .result a { color: var(--accent); }
+    .warn-bar {
+      background: rgba(255,207,92,.1); border: 1px solid rgba(255,207,92,.35);
+      color: var(--warn); border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 18px;
+    }
+    .hidden { display: none; }
+    .meta { color: var(--muted); font-size: 12px; margin-top: 10px; }
+    select {
+      width: 100%; background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: 9px; color: var(--text); padding: 11px 12px; font-size: 14px; outline: none;
+    }
+    select:focus { border-color: var(--accent); }
+    .human-box {
+      background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 16px; margin-bottom: 18px;
+    }
+    .human-box summary { cursor: pointer; font-size: 14px; color: var(--text); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>백링크 침투기 v1</h1>
+      <div class="sub">제작자_이상민</div>
+    </header>
+
+    <div id="keyWarn" class="warn-bar hidden">
+      유효한 <b>OPENAI_API_KEY</b>가 없습니다. <code>.env</code>에 실제 키를 입력하고 저장하세요.
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label for="url">글쓰기 폼 URL</label>
+        <input type="text" id="url" placeholder="http://seouljasu.com/bbs/write.php?bo_table=qa" />
+      </div>
+      <div class="field">
+        <label for="topic">AI 본문 주제 힌트 (선택)</label>
+        <input type="text" id="topic" placeholder="예: 단체 유니폼 자수 제작 문의" />
+      </div>
+      <div class="field">
+        <label for="backlinkUrl">백링크 URL (선택) — 본문에 &lt;a&gt; 링크로 삽입</label>
+        <input type="text" id="backlinkUrl" placeholder="https://the1seoul.com/ko" />
+      </div>
+      <div class="field">
+        <label for="backlinkText">백링크 앵커 텍스트 (선택)</label>
+        <input type="text" id="backlinkText" placeholder="디원서울(The 1 Seoul) 공식 홈페이지" />
+      </div>
+      <div class="row" style="margin-bottom: 18px;">
+        <div class="field" style="margin-bottom:0; flex:1; min-width:140px;">
+          <label for="repeat">반복 등록 횟수</label>
+          <input type="text" id="repeat" value="1" inputmode="numeric" />
+        </div>
+        <div class="field" style="margin-bottom:0; flex:1; min-width:140px;">
+          <label for="rotateEvery">IP 변경 주기 (몇 글당)</label>
+          <input type="text" id="rotateEvery" value="1" inputmode="numeric" />
+        </div>
+      </div>
+      <div class="row" style="margin-bottom: 18px;">
+        <label class="check"><input type="checkbox" id="rotateIp" /> IP 변경 사용 (안드로이드 ADB 테더링)</label>
+        <span id="adbBadge" class="badge">ADB 확인 중</span>
+        <span id="ipBadge" class="badge" style="cursor:pointer;" title="클릭하면 현재 공인 IP 확인">현재 IP 확인</span>
+      </div>
+      <div class="row" style="margin-bottom: 18px;">
+        <label class="check"><input type="checkbox" id="showBrowser" /> 브라우저 창 표시</label>
+        <label class="check"><input type="checkbox" id="dryRun" /> Dry-run (제출 생략)</label>
+        <label class="check"><input type="checkbox" id="mobile" /> 모바일 모드 (m.* 사이트는 자동)</label>
+      </div>
+
+      <details class="human-box">
+        <summary>사람처럼 행동 (안티봇 풋프린트)</summary>
+        <div style="padding-top:14px;">
+          <div class="row" style="margin-bottom:14px;">
+            <label class="check"><input type="checkbox" id="hEnabled" /> 휴먼라이크 사용</label>
+            <label class="check"><input type="checkbox" id="hTyping" checked /> 글자 단위 타이핑</label>
+            <label class="check"><input type="checkbox" id="hUseAi" checked /> AI 검색어(Referer) 생성</label>
+          </div>
+          <div class="row" style="margin-bottom:14px;">
+            <div class="field" style="margin-bottom:0; flex:1; min-width:130px;">
+              <label for="hDevice">디바이스</label>
+              <select id="hDevice">
+                <option value="desktop">데스크톱</option>
+                <option value="mobile">모바일</option>
+                <option value="random">랜덤</option>
+              </select>
+            </div>
+            <div class="field" style="margin-bottom:0; flex:1; min-width:130px;">
+              <label for="hReferer">Referer(유입경로)</label>
+              <select id="hReferer">
+                <option value="search">검색 유입</option>
+                <option value="site">사이트 직접</option>
+                <option value="none">없음</option>
+                <option value="random">랜덤</option>
+              </select>
+            </div>
+          </div>
+          <div class="row" style="margin-bottom:14px;">
+            <div class="field" style="margin-bottom:0; flex:1; min-width:120px;">
+              <label for="hDelayMin">행동 지연 최소(ms)</label>
+              <input type="text" id="hDelayMin" value="400" inputmode="numeric" />
+            </div>
+            <div class="field" style="margin-bottom:0; flex:1; min-width:120px;">
+              <label for="hDelayMax">행동 지연 최대(ms)</label>
+              <input type="text" id="hDelayMax" value="1500" inputmode="numeric" />
+            </div>
+          </div>
+          <div class="row" style="margin-bottom:4px;">
+            <div class="field" style="margin-bottom:0; flex:1; min-width:110px;">
+              <label for="hScrollMin">스크롤 최소</label>
+              <input type="text" id="hScrollMin" value="2" inputmode="numeric" />
+            </div>
+            <div class="field" style="margin-bottom:0; flex:1; min-width:110px;">
+              <label for="hScrollMax">스크롤 최대</label>
+              <input type="text" id="hScrollMax" value="6" inputmode="numeric" />
+            </div>
+            <div class="field" style="margin-bottom:0; flex:1; min-width:110px;">
+              <label for="hMouseMin">마우스 최소</label>
+              <input type="text" id="hMouseMin" value="3" inputmode="numeric" />
+            </div>
+            <div class="field" style="margin-bottom:0; flex:1; min-width:110px;">
+              <label for="hMouseMax">마우스 최대</label>
+              <input type="text" id="hMouseMax" value="8" inputmode="numeric" />
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <div class="actions">
+        <button id="runBtn">실행</button>
+        <span id="badge" class="badge">대기</span>
+      </div>
+      <div class="meta" id="meta"></div>
+    </div>
+
+    <div class="card">
+      <label>실행 로그</label>
+      <div class="console" id="console"></div>
+      <div class="result hidden" id="result"></div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const consoleEl = $("console");
+    const badge = $("badge");
+    const runBtn = $("runBtn");
+
+    function setBadge(text, cls) {
+      badge.textContent = text;
+      badge.className = "badge" + (cls ? " " + cls : "");
+    }
+
+    function appendLog(line) {
+      const div = document.createElement("div");
+      let cls = "";
+      if (line.startsWith("오류") || line.startsWith("실패")) cls = "ln-err";
+      else if (line.startsWith("성공") || line.startsWith("등록 URL")) cls = "ln-ok";
+      else if (/^\[\d\/5\]/.test(line)) cls = "ln-step";
+      if (cls) div.className = cls;
+      div.textContent = line;
+      consoleEl.appendChild(div);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    async function loadStatus() {
+      try {
+        const r = await fetch("/api/status");
+        const s = await r.json();
+        if (!$("url").value && s.target_url) $("url").value = s.target_url;
+        $("meta").textContent = `모델: ${s.model}`;
+        $("keyWarn").classList.toggle("hidden", s.key_ok);
+        runBtn.disabled = !s.key_ok || s.busy;
+        if (s.busy) setBadge("실행 중", "run");
+
+        const adbBadge = $("adbBadge");
+        adbBadge.textContent = s.adb_ok ? "ADB 연결됨" : "ADB 없음";
+        adbBadge.className = "badge " + (s.adb_ok ? "ok" : "err");
+        adbBadge.title = s.adb_msg || "";
+      } catch (e) {}
+    }
+
+    async function checkIp() {
+      const b = $("ipBadge");
+      b.textContent = "확인 중...";
+      try {
+        const r = await fetch("/api/current-ip");
+        const s = await r.json();
+        b.textContent = s.ip ? `현재 IP: ${s.ip}` : "IP 확인 실패";
+      } catch (e) {
+        b.textContent = "IP 확인 실패";
+      }
+    }
+
+    async function run() {
+      consoleEl.innerHTML = "";
+      $("result").classList.add("hidden");
+      runBtn.disabled = true;
+      setBadge("시작 중...", "run");
+
+      const body = {
+        url: $("url").value.trim() || null,
+        topic: $("topic").value.trim() || null,
+        show_browser: $("showBrowser").checked,
+        dry_run: $("dryRun").checked,
+        backlink_url: $("backlinkUrl").value.trim() || null,
+        backlink_text: $("backlinkText").value.trim() || null,
+        repeat: parseInt($("repeat").value, 10) || 1,
+        rotate_ip: $("rotateIp").checked,
+        rotate_every: parseInt($("rotateEvery").value, 10) || 1,
+        mobile: $("mobile").checked,
+        human: {
+          enabled: $("hEnabled").checked,
+          device: $("hDevice").value,
+          referer_mode: $("hReferer").value,
+          min_delay_ms: parseInt($("hDelayMin").value, 10) || 400,
+          max_delay_ms: parseInt($("hDelayMax").value, 10) || 1500,
+          scroll_min: parseInt($("hScrollMin").value, 10) || 0,
+          scroll_max: parseInt($("hScrollMax").value, 10) || 0,
+          mouse_min: parseInt($("hMouseMin").value, 10) || 0,
+          mouse_max: parseInt($("hMouseMax").value, 10) || 0,
+          typing: $("hTyping").checked,
+          use_ai: $("hUseAi").checked,
+        },
+      };
+
+      let jobId;
+      try {
+        const r = await fetch("/api/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await r.json();
+        if (!r.ok) { appendLog("오류: " + (data.error || "실행 실패")); reset(); return; }
+        jobId = data.job_id;
+      } catch (e) {
+        appendLog("오류: 서버에 연결할 수 없습니다."); reset(); return;
+      }
+
+      setBadge("실행 중", "run");
+      const es = new EventSource(`/api/stream/${jobId}`);
+      es.addEventListener("log", (ev) => appendLog(JSON.parse(ev.data)));
+      es.addEventListener("done", (ev) => {
+        const res = JSON.parse(ev.data);
+        es.close();
+        finish(res);
+      });
+      es.addEventListener("error", () => { es.close(); reset(); });
+    }
+
+    function finish(res) {
+      const box = $("result");
+      box.classList.remove("hidden");
+      if (res && res.success) {
+        setBadge("완료", "ok");
+        let html = `<b style="color:var(--ok)">성공:</b> ${res.message}`;
+        if (res.result_url) html += `<br/><a href="${res.result_url}" target="_blank">${res.result_url}</a>`;
+        box.innerHTML = html;
+      } else {
+        setBadge("실패", "err");
+        box.innerHTML = `<b style="color:var(--err)">실패:</b> ${res ? res.message : "알 수 없는 오류"}`;
+      }
+      runBtn.disabled = false;
+    }
+
+    function reset() { setBadge("대기"); runBtn.disabled = false; }
+
+    runBtn.addEventListener("click", run);
+    $("ipBadge").addEventListener("click", checkIp);
+    loadStatus();
+  </script>
+</body>
+</html>
