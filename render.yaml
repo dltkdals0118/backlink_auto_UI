@@ -1,0 +1,24 @@
+# Render.com 배포용 (https://render.com)
+# Dashboard → New → Blueprint → 이 저장소 연결
+services:
+  - type: web
+    name: backlink-auto-ui
+    runtime: docker
+    plan: starter
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      # PORT는 Render가 자동 주입 (web_app.py가 os.getenv("PORT") 사용)
+      - key: HEADLESS
+        value: "true"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o
+      - key: OPENAI_VISION_MODEL
+        value: gpt-4o
+      - key: TARGET_URL
+        value: ""
+    healthCheckPath: /api/status
